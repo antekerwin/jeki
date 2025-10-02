@@ -1,0 +1,771 @@
+cd /root/jeks/YapSchemaScanner/
+
+# Update backend - tambah analyzer endpoint
+cat > api/index.py << 'EOF'
+from flask import Flask, render_template, request, jsonify
+import os
+import requests
+import re
+import random
+
+app = Flask(__name__)
+
+# [Previous functions: fetch_kaito_projects, get_fallback_projects, get_category - KEEP SAME]
+def fetch_kaito_projects():
+    try:
+        response = requests.get("https://yaps.kaito.ai/pre-tge", timeout=10)
+        if response.status_code != 200:
+            return get_fallback_projects()
+        html = response.text
+        pattern = r'(MOMENTUM|LIMITLESS|POLYMARKET|SENTIENT|MONAD|OPENSEA|BASE|ALLORA|YIELDBASIS|CYSIC|BILLIONS|MET|WALLCHAIN|IRYS|RECALL|KITE|MASK|EVERLYN|DZ|TALUS|BERACHAIN|STORY)'
+        matches = re.findall(pattern, html)
+        seen = set()
+        projects = []
+        for match in matches:
+            if match not in seen and len(projects) < 20:
+                projects.append({"name": match.title() if match != "MASK" else "MetaMask", "mindshare": "High", "category": get_category(match)})
+                seen.add(match)
+        return projects if projects else get_fallback_projects()
+    except:
+        return get_fallback_projects()
+
+def get_fallback_projects():
+    return [
+        {"name": "Limitless", "mindshare": "High", "category": "AI Tools"},
+        {"name": "Polymarket", "mindshare": "Very High", "category": "Prediction Markets"},
+        {"name": "Sentient", "mindshare": "High", "category": "AI Agents"},
+    ]
+
+def get_category(project):
+    categories = {
+        "LIMITLESS": "AI Tools", "SENTIENT": "AI Agents", "POLYMARKET": "Prediction Markets",
+        "MONAD": "Layer 1", "BASE": "Layer 2", "OPENSEA": "NFT Marketplace",
+    }
+    return categories.get(project, "DeFi")
+
+PROMPTS = {
+    "data-driven": {"name": "📊 Data & Metrics", "description": "Lead dengan data konkret"},
+    "competitive": {"name": "🎯 Competitive Edge", "description": "Compare kompetitor"},
+    "thesis": {"name": "💡 Bold Prediction", "description": "Trend analysis"},
+    "custom": {"name": "✏️ Custom Request", "description": "Request bebas"}
+}
+
+@app.route('/')
+def home():
+    projects = fetch_kaito_projects()
+    return render_template('index.html', projects=projects, prompts=PROMPTS)
+
+@app.route('/generate', methods=['POST'])
+def generate():
+    # [KEEP EXISTING GENERATE CODE - NO CHANGE]
+    try:
+        data = request.json
+        project = data.get('project')
+        prompt_type = data.get('prompt_type')
+        custom_request = data.get('custom_request', '')
+        
+        api_key = os.getenv('GROQ_API_KEY')
+        if not api_key:
+            return jsonify({"error": "API key not set"}), 500
+        
+        yaps_base = """YAPS: 150-280 chars, data/metrics, original, question."""
+        styles = ["casual trader", "analyst", "community", "contrarian", "technical"]
+        chosen_style = random.choice(styles)
+        
+        if prompt_type == "custom" and custom_request:
+            user_prompt = f"{yaps_base}\nPROJECT: {project}\nSTYLE: {chosen_style}\nREQUEST: {custom_request}\n\nGENERATE tweet:"
+        else:
+            user_prompt = f"{yaps_base}\nPROJECT: {project}\nSTYLE: {chosen_style}\n\nGenerate data-driven tweet. 150-280 chars."
+        
+        temp = random.uniform(0.7, 0.95)
+        
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "system", "content": f"Crypto analyst: {chosen_style}. YAPS algorithm. Output ONLY tweet."}, {"role": "user", "content": user_prompt}],
+            "temperature": temp, "max_tokens": 400, "top_p": 0.9
+        }
+        
+        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=30)
+        if response.status_code != 200:
+            return jsonify({"error": f"API error"}), 500
+        
+        content = response.json()['choices'][0]['message']['content']
+        char_count = len(content)
+        optimal_length = 150 <= char_count <= 280
+        has_data = any(char.isdigit() for char in content)
+        has_question = '?' in content
+        quality = 7 + (1 if optimal_length else 0) + (1 if has_data else 0) + (1 if has_question else 0)
+        
+        scoring = {
+            "crypto_relevance": quality, "engagement_potential": 9 if has_question else 7,
+            "semantic_quality": 9 if (has_data and optimal_length) else 7,
+            "total": quality + (9 if has_question else 7) + (9 if has_data else 7),
+            "rating": f"⭐⭐⭐⭐{'⭐' if quality >= 9 else ''} Quality: {quality}/10",
+            "feedback": [f"📏 {char_count} chars" + (" ✅" if optimal_length else " ⚠️"), f"📊 Data: {'✅' if has_data else '⚠️'}", f"💬 Engage: {'✅' if has_question else '⚠️'}", f"🎯 Est. YAPS: ~{int(quality*0.7*75)} pts", f"🎨 Style: {chosen_style}"]
+        }
+        return jsonify({"success": True, "content": content, "scoring": scoring})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/analyze', methods=['POST'])
+def analyze_content():
+    """Analyze user's content berdasarkan Kaito YAPS algorithm"""
+    try:
+        data = request.json
+        content = data.get('content', '').strip()
+        
+        if not content:
+            return jsonify({"error": "Content required"}), 400
+        
+        # 1. CONTENT OPTIMIZATION (30% weight)
+        char_count = len(content)
+        optimal_length = 150 <= char_count <= 280
+        min_length = char_count >= 50
+        
+        # Crypto keywords detection
+        crypto_keywords = ['defi', 'layer', 'l2', 'ai', 'rwa', 'tvl', 'airdrop', 'protocol', 'chain', 'token', 'nft', 'dao', 'staking', 'yield', 'bridge', 'zk', 'rollup', 'evm', 'smart contract']
+        content_lower = content.lower()
+        keyword_count = sum(1 for kw in crypto_keywords if kw in content_lower)
+        has_crypto_focus = keyword_count >= 1
+        
+        # Keyword stuffing detection
+        keyword_stuffing = keyword_count > 5  # Too many keywords
+        
+        # Original insight (check for generic patterns)
+        generic_phrases = ['to the moon', 'lfg', 'gm', 'ser', 'ngmi', 'wagmi', 'bullish', 'bearish']
+        generic_count = sum(1 for phrase in generic_phrases if phrase in content_lower)
+        is_original = generic_count < 2
+        
+        content_opt_score = 0
+        if min_length: content_opt_score += 2
+        if optimal_length: content_opt_score += 3
+        if has_crypto_focus: content_opt_score += 3
+        if is_original: content_opt_score += 2
+        content_opt_score = min(10, content_opt_score)  # Max 10
+        
+        # 2. ENGAGEMENT STRATEGY (50% weight)
+        has_question = '?' in content
+        has_data = any(char.isdigit() for char in content)
+        has_cta = any(word in content_lower for word in ['what', 'how', 'why', 'thoughts', 'think', 'opinion'])
+        
+        engagement_score = 0
+        if has_question: engagement_score += 4
+        if has_data: engagement_score += 3
+        if has_cta: engagement_score += 3
+        engagement_score = min(10, engagement_score)
+        
+        # 3. CONTENT QUALITY (20% weight)
+        has_metrics = bool(re.search(r'\d+[%$MBK]|\$\d+|\d+x', content))  # Numbers with units
+        has_analysis = len(content.split()) > 15  # More than 15 words = deeper content
+        no_spam_pattern = not bool(re.search(r'(.)\1{3,}', content))  # No repeating chars
+        
+        quality_score = 0
+        if has_metrics: quality_score += 4
+        if has_analysis: quality_score += 3
+        if no_spam_pattern: quality_score += 3
+        quality_score = min(10, quality_score)
+        
+        # 4. HIGH-SCORING CONTENT TYPE DETECTION
+        content_types = []
+        if 'tvl' in content_lower or 'revenue' in content_lower: content_types.append("Protocol analysis ✅")
+        if has_metrics and ('vs' in content_lower or 'compare' in content_lower): content_types.append("Comparison ✅")
+        if 'airdrop' in content_lower and 'risk' in content_lower: content_types.append("Airdrop strategy ✅")
+        if re.search(r'thread|1/', content_lower): content_types.append("Thread format ✅")
+        
+        # 5. PENALTIES DETECTION
+        penalties = []
+        if keyword_stuffing: penalties.append("⚠️ Keyword stuffing detected")
+        if 'kaito' in content_lower and '@' in content: penalties.append("⚠️ Avoid tagging Kaito")
+        if generic_count >= 3: penalties.append("⚠️ Too many generic phrases")
+        if char_count < 50: penalties.append("⚠️ Too short (min 50 chars)")
+        if not has_crypto_focus: penalties.append("⚠️ No crypto-specific topic")
+        
+        # 6. OPTIMIZATION SUGGESTIONS
+        suggestions = []
+        if not has_question: suggestions.append("💡 Add question untuk drive discussion")
+        if not has_data: suggestions.append("💡 Include metrics/data untuk credibility")
+        if char_count < 150: suggestions.append("💡 Expand to 150-280 chars (optimal)")
+        if not content_types: suggestions.append("💡 Try protocol deep-dive atau comparison format")
+        if not is_original: suggestions.append("💡 Add personal analysis/unique insight")
+        
+        # WEIGHTED TOTAL SCORE
+        total_score = (content_opt_score * 0.3) + (engagement_score * 0.5) + (quality_score * 0.2)
+        total_score = round(total_score, 1)
+        
+        # Estimated YAPS Points
+        # Formula: Quality × Engagement × 75
+        estimated_yaps = int(total_score * 0.7 * 75)
+        
+        # Rating
+        if total_score >= 9:
+            rating = "⭐⭐⭐⭐⭐ Excellent - High YAPS potential!"
+        elif total_score >= 7:
+            rating = "⭐⭐⭐⭐ Good - Solid content"
+        elif total_score >= 5:
+            rating = "⭐⭐⭐ Fair - Needs improvement"
+        else:
+            rating = "⭐⭐ Poor - Optimize further"
+        
+        return jsonify({
+            "success": True,
+            "analysis": {
+                "content_optimization": {
+                    "score": content_opt_score,
+                    "weight": "30%",
+                    "details": {
+                        "length": f"{char_count} chars" + (" ✅ optimal" if optimal_length else " ⚠️ adjust to 150-280"),
+                        "crypto_focus": "✅ Yes" if has_crypto_focus else "❌ No crypto topic",
+                        "originality": "✅ Original" if is_original else "⚠️ Too generic",
+                        "keywords": f"{keyword_count} keywords" + (" ✅" if 1 <= keyword_count <= 3 else " ⚠️")
+                    }
+                },
+                "engagement_strategy": {
+                    "score": engagement_score,
+                    "weight": "50%",
+                    "details": {
+                        "question": "✅ Yes" if has_question else "❌ No",
+                        "data_driven": "✅ Yes" if has_data else "❌ No data/metrics",
+                        "cta": "✅ Yes" if has_cta else "❌ No call-to-action"
+                    }
+                },
+                "content_quality": {
+                    "score": quality_score,
+                    "weight": "20%",
+                    "details": {
+                        "metrics": "✅ Includes metrics" if has_metrics else "❌ No specific metrics",
+                        "depth": "✅ Detailed analysis" if has_analysis else "⚠️ Surface-level",
+                        "spam_check": "✅ Clean" if no_spam_pattern else "⚠️ Spam pattern detected"
+                    }
+                },
+                "content_types": content_types if content_types else ["ℹ️ Standard tweet format"],
+                "penalties": penalties if penalties else ["✅ No penalties detected"],
+                "suggestions": suggestions if suggestions else ["✅ Content is well-optimized!"],
+                "total_score": total_score,
+                "estimated_yaps": estimated_yaps,
+                "rating": rating
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+EOF
+
+# Update HTML template - tambah menu Check Kualitas
+cat > api/templates/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAPS Content Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 { color: #667eea; font-size: 2.5em; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 1.1em; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+        .tab:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.3); }
+        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .form-group { margin-bottom: 25px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border 0.3s;
+            font-family: inherit;
+        }
+        .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .prompt-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .prompt-card {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .prompt-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        .prompt-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .prompt-card h3 { color: #667eea; margin-bottom: 8px; font-size: 1em; }
+        .prompt-card p { color: #666; font-size: 0.85em; }
+        .custom-area {
+            display: none;
+            margin-top: 15px;
+        }
+        .custom-area.show { display: block; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: scale(1.02); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .result-section { display: none; }
+        .result-section.show { display: block; }
+        .content-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        .content-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .copy-btn:hover { background: #218838; }
+        .scoring {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .score-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        .score-value { font-size: 2em; font-weight: 700; color: #667eea; }
+        .score-label { color: #666; margin-top: 5px; font-size: 0.9em; }
+        .feedback-list {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        .feedback-list ul { list-style: none; }
+        .feedback-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .loading.show { display: block; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .analysis-grid {
+            display: grid;
+            gap: 20px;
+        }
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .analysis-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin: 5px;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 YAPS Content Tool</h1>
+            <p>Generate & Analyze konten YAPS-optimized (Kaito AI)</p>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="generate">🎯 Generate Konten</div>
+            <div class="tab" data-tab="analyze">📊 Check Kualitas</div>
+        </div>
+        
+        <!-- TAB 1: GENERATE -->
+        <div id="generate" class="tab-content active">
+            <div class="card">
+                <form id="generatorForm">
+                    <div class="form-group">
+                        <label>1️⃣ Pilih Project</label>
+                        <select id="projectSelect" required>
+                            <option value="">-- Pilih Project --</option>
+                            {% for project in projects %}
+                            <option value="{{ project.name }}">{{ project.name }} ({{ project.category }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>2️⃣ Pilih Jenis Konten</label>
+                        <div class="prompt-cards">
+                            {% for key, prompt in prompts.items() %}
+                            <div class="prompt-card" data-value="{{ key }}">
+                                <h3>{{ prompt.name }}</h3>
+                                <p>{{ prompt.description }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" id="promptType" required>
+                        
+                        <div id="customArea" class="custom-area">
+                            <label>✏️ Request Custom:</label>
+                            <textarea id="customRequest" rows="3" placeholder="Contoh: Buat thread airdrop strategy..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">🎯 Generate</button>
+                </form>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">Generating...</p>
+                </div>
+            </div>
+            
+            <div class="card result-section" id="resultSection">
+                <h2 style="color: #667eea; margin-bottom: 20px;">📝 Hasil Generate</h2>
+                <div class="content-box">
+                    <div class="content-text" id="generatedContent"></div>
+                    <button class="copy-btn" id="copyBtn">📋 Copy</button>
+                </div>
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #333;">📊 Score</h3>
+                <div class="scoring" id="scoringSection"></div>
+                <div class="feedback-list" id="feedbackSection"></div>
+                <button class="btn" style="margin-top: 20px;" onclick="location.reload()">🔄 Generate Baru</button>
+            </div>
+        </div>
+        
+        <!-- TAB 2: ANALYZE -->
+        <div id="analyze" class="tab-content">
+            <div class="card">
+                <h2 style="color: #667eea; margin-bottom: 20px;">📊 Check Kualitas Konten</h2>
+                <p style="color: #666; margin-bottom: 20px;">Paste konten tweet Anda untuk mendapat scoring & feedback berdasarkan Kaito YAPS algorithm</p>
+                
+                <form id="analyzeForm">
+                    <div class="form-group">
+                        <label>📝 Konten Tweet Anda:</label>
+                        <textarea id="analyzeContent" rows="6" placeholder="Paste konten tweet Anda disini..." required></textarea>
+                        <small style="color: #999;">Min 50 karakter, optimal 150-280 karakter</small>
+                    </div>
+                    <button type="submit" class="btn">🔍 Analyze Kualitas</button>
+                </form>
+                
+                <div class="loading" id="loadingAnalyze">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">Analyzing...</p>
+                </div>
+            </div>
+            
+            <div class="card result-section" id="analyzeResult">
+                <h2 style="color: #667eea; margin-bottom: 20px;" id="analyzeRating"></h2>
+                
+                <div class="analysis-grid" id="analysisGrid"></div>
+                
+                <button class="btn" style="margin-top: 20px;" onclick="document.getElementById('analyzeContent').value=''; document.getElementById('analyzeResult').classList.remove('show');">🔄 Analyze Konten Lain</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // Generate form (existing)
+        const promptCards = document.querySelectorAll('.prompt-card');
+        const promptTypeInput = document.getElementById('promptType');
+        const customArea = document.getElementById('customArea');
+        const form = document.getElementById('generatorForm');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        
+        promptCards.forEach(card => {
+            card.addEventListener('click', () => {
+                promptCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                const value = card.dataset.value;
+                promptTypeInput.value = value;
+                if (value === 'custom') {
+                    customArea.classList.add('show');
+                } else {
+                    customArea.classList.remove('show');
+                }
+            });
+        });
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const project = document.getElementById('projectSelect').value;
+            const promptType = promptTypeInput.value;
+            const customRequest = document.getElementById('customRequest').value;
+            
+            if (!project || !promptType) {
+                alert('Pilih project dan jenis konten!');
+                return;
+            }
+            
+            if (promptType === 'custom' && !customRequest) {
+                alert('Tulis request custom!');
+                return;
+            }
+            
+            loading.classList.add('show');
+            resultSection.classList.remove('show');
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project, prompt_type: promptType, custom_request: customRequest })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error');
+                displayResult(data);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+        
+        function displayResult(data) {
+            document.getElementById('generatedContent').textContent = data.content;
+            const scoring = data.scoring;
+            const scoringHTML = `
+                <div class="score-item">
+                    <div class="score-value">${scoring.crypto_relevance}/10</div>
+                    <div class="score-label">Quality</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value">${scoring.engagement_potential}/10</div>
+                    <div class="score-label">Engagement</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value">${scoring.semantic_quality}/10</div>
+                    <div class="score-label">Semantic</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value">${scoring.total}/30</div>
+                    <div class="score-label">Total</div>
+                </div>
+            `;
+            document.getElementById('scoringSection').innerHTML = scoringHTML;
+            const feedbackHTML = `
+                <h4 style="margin-bottom: 15px; color: #333;">${scoring.rating}</h4>
+                <ul>${scoring.feedback.map(item => `<li>${item}</li>`).join('')}</ul>
+            `;
+            document.getElementById('feedbackSection').innerHTML = feedbackHTML;
+            resultSection.classList.add('show');
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const content = document.getElementById('generatedContent').textContent;
+            navigator.clipboard.writeText(content).then(() => alert('✅ Copied!'));
+        });
+        
+        // Analyze form
+        const analyzeForm = document.getElementById('analyzeForm');
+        const loadingAnalyze = document.getElementById('loadingAnalyze');
+        const analyzeResult = document.getElementById('analyzeResult');
+        
+        analyzeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('analyzeContent').value.trim();
+            
+            if (!content) {
+                alert('Paste konten tweet Anda!');
+                return;
+            }
+            
+            loadingAnalyze.classList.add('show');
+            analyzeResult.classList.remove('show');
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error');
+                displayAnalysis(data.analysis);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loadingAnalyze.classList.remove('show');
+            }
+        });
+        
+        function displayAnalysis(analysis) {
+            document.getElementById('analyzeRating').textContent = analysis.rating + ' | Est. YAPS: ~' + analysis.estimated_yaps + ' pts';
+            
+            const gridHTML = `
+                <div class="analysis-section">
+                    <h3>1. Content Optimization (30% weight) - Score: ${analysis.content_optimization.score}/10</h3>
+                    <div class="detail-row"><span>Length:</span><span>${analysis.content_optimization.details.length}</span></div>
+                    <div class="detail-row"><span>Crypto Focus:</span><span>${analysis.content_optimization.details.crypto_focus}</span></div>
+                    <div class="detail-row"><span>Originality:</span><span>${analysis.content_optimization.details.originality}</span></div>
+                    <div class="detail-row"><span>Keywords:</span><span>${analysis.content_optimization.details.keywords}</span></div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>2. Engagement Strategy (50% weight) - Score: ${analysis.engagement_strategy.score}/10</h3>
+                    <div class="detail-row"><span>Question/Hook:</span><span>${analysis.engagement_strategy.details.question}</span></div>
+                    <div class="detail-row"><span>Data-Driven:</span><span>${analysis.engagement_strategy.details.data_driven}</span></div>
+                    <div class="detail-row"><span>Call-to-Action:</span><span>${analysis.engagement_strategy.details.cta}</span></div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>3. Content Quality (20% weight) - Score: ${analysis.content_quality.score}/10</h3>
+                    <div class="detail-row"><span>Metrics/Data:</span><span>${analysis.content_quality.details.metrics}</span></div>
+                    <div class="detail-row"><span>Analysis Depth:</span><span>${analysis.content_quality.details.depth}</span></div>
+                    <div class="detail-row"><span>Spam Check:</span><span>${analysis.content_quality.details.spam_check}</span></div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>4. Content Types Detected:</h3>
+                    ${analysis.content_types.map(type => `<span class="badge badge-success">${type}</span>`).join('')}
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>5. Penalties:</h3>
+                    ${analysis.penalties.map(p => `<span class="badge badge-warning">${p}</span>`).join('')}
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>6. Optimization Suggestions:</h3>
+                    ${analysis.suggestions.map(s => `<span class="badge badge-info">${s}</span>`).join('')}
+                </div>
+                
+                <div class="score-item" style="margin-top: 20px;">
+                    <div class="score-value">${analysis.total_score}/10</div>
+                    <div class="score-label">TOTAL WEIGHTED SCORE</div>
+                </div>
+            `;
+            
+            document.getElementById('analysisGrid').innerHTML = gridHTML;
+            analyzeResult.classList.add('show');
+            analyzeResult.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
+EOF
+
+git add .
+git commit -m "Add Check Kualitas Konten feature with Kaito algorithm scoring"
+git push origin main

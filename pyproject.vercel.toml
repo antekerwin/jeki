@@ -1,0 +1,10 @@
+[project]
+name = "yaps-content-generator"
+version = "1.0.0"
+description = "AI-powered YAPS content generator"
+requires-python = ">=3.11"
+
+dependencies = [
+    "flask>=3.1.2",
+    "openai>=2.0.1",
+]

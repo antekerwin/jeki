@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAPS Content Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 { color: #667eea; font-size: 2.5em; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 1.1em; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+        .tab:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.3); }
+        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .form-group { margin-bottom: 25px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border 0.3s;
+            font-family: inherit;
+        }
+        .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .prompt-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .prompt-card {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .prompt-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        .prompt-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .prompt-card h3 { color: #667eea; margin-bottom: 8px; font-size: 1em; }
+        .prompt-card p { color: #666; font-size: 0.85em; }
+        .custom-area {
+            display: none;
+            margin-top: 15px;
+        }
+        .custom-area.show { display: block; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: scale(1.02); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .result-section { display: none; }
+        .result-section.show { display: block; }
+        .content-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        .content-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .copy-btn:hover { background: #218838; }
+        .scoring {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .score-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        .score-value { font-size: 2em; font-weight: 700; color: #667eea; }
+        .score-label { color: #666; margin-top: 5px; font-size: 0.9em; }
+        .feedback-list {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        .feedback-list ul { list-style: none; }
+        .feedback-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .loading.show { display: block; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .analysis-grid {
+            display: grid;
+            gap: 20px;
+        }
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .analysis-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin: 5px;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ðŸš€ YAPS Content Tool</h1>
+            <p>Generate & Analyze konten YAPS-optimized (Kaito AI)</p>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="generate">ðŸŽ¯ Generate Konten</div>
+            <div class="tab" data-tab="analyze">ðŸ“Š Check Kualitas</div>
+        </div>
+        
+        <!-- TAB 1: GENERATE -->
+        <div id="generate" class="tab-content active">
+            <div class="card">
+                <form id="generatorForm">
+                    <div class="form-group">
+                        <label>1ï¸âƒ£ Pilih Project</label>
+                        <select id="projectSelect" required>
+                            <option value="">-- Pilih Project --</option>
+                            {% for project in projects %}
+                            <option value="{{ project.name }}">{{ project.name }} ({{ project.category }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>2ï¸âƒ£ Pilih Jenis Konten</label>
+                        <div class="prompt-cards">
+                            {% for key, prompt in prompts.items() %}
+                            <div class="prompt-card" data-value="{{ key }}">
+                                <h3>{{ prompt.name }}</h3>
+                                <p>{{ prompt.description }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" id="promptType" required>
+                        
+                        <div id="customArea" class="custom-area">
+                            <label>âœï¸ Request Custom:</label>
+                            <textarea id="customRequest" rows="3" placeholder="Contoh: Buat thread airdrop strategy..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">ðŸŽ¯ Generate</button>
+                </form>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">Generating...</p>
+                </div>
+            </div>
+            
+            <div class="card result-section" id="resultSection">
+                <h2 style="color: #667eea; margin-bottom: 20px;">ðŸ“ Hasil Generate</h2>
+                <div class="content-box">
+                    <div class="content-text" id="generatedContent"></div>
+                    <button class="copy-btn" id="copyBtn">ðŸ“‹ Copy</button>
+                </div>
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #333;">ðŸ“Š Score</h3>
+                <div class="scoring" id="scoringSection"></div>
+                <div class="feedback-list" id="feedbackSection"></div>
+                <button class="btn" style="margin-top: 20px;" onclick="location.reload()">ðŸ”„ Generate Baru</button>
+            </div>
+        </div>
+        
+        <!-- TAB 2: ANALYZE -->
+        <div id="analyze" class="tab-content">
+            <div class="card">
+                <h2 style="color: #667eea; margin-bottom: 20px;">ðŸ“Š Check Kualitas Konten</h2>
+                <p style="color: #666; margin-bottom: 20px;">Paste konten tweet Anda untuk mendapat scoring & feedback berdasarkan Kaito YAPS algorithm</p>
+                
+                <form id="analyzeForm">
+                    <div class="form-group">
+                        <label>ðŸ“ Konten Tweet Anda:</label>
+                        <textarea id="analyzeContent" rows="6" placeholder="Paste konten tweet Anda disini..." required></textarea>
+                        <small style="color: #999;">Min 50 karakter, optimal 150-280 karakter</small>
+                    </div>
+                    <button type="submit" class="btn">ðŸ” Analyze Kualitas</button>
+                </form>
+                
+                <div class="loading" id="loadingAnalyze">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">Analyzing...</p>
+                </div>
+            </div>
+            
+            <div class="card result-section" id="analyzeResult">
+                <h2 style="color: #667eea; margin-bottom: 20px;" id="analyzeRating"></h2>
+                
+                <div class="analysis-grid" id="analysisGrid"></div>
+                
+                <button class="btn" style="margin-top: 20px;" onclick="document.getElementById('analyzeContent').value=''; document.getElementById('analyzeResult').classList.remove('show');">ðŸ”„ Analyze Konten Lain</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // Generate form (existing)
+        const promptCards = document.querySelectorAll('.prompt-card');
+        const promptTypeInput = document.getElementById('promptType');
+        const customArea = document.getElementById('customArea');
+        const form = document.getElementById('generatorForm');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        
+        promptCards.forEach(card => {
+            card.addEventListener('click', () => {
+                promptCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                const value = card.dataset.value;
+                promptTypeInput.value = value;
+                if (value === 'custom') {
+                    customArea.classList.add('show');
+                } else {
+                    customArea.classList.remove('show');
+                }
+            });
+        });
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const project = document.getElementById('projectSelect').value;
+            const promptType = promptTypeInput.value;
+            const customRequest = document.getElementById('customRequest').value;
+            
+            if (!project || !promptType) {
+                alert('Pilih project dan jenis konten!');
+                return;
+            }
+            
+            if (promptType === 'custom' && !customRequest) {
+                alert('Tulis request custom!');
+                return;
+            }
+            
+            loading.classList.add('show');
+            resultSection.classList.remove('show');
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project, prompt_type: promptType, custom_request: customRequest })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error');
+                displayResult(data);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+        
+        function displayResult(data) {
+            document.getElementById('generatedContent').textContent = data.content;
+            const scoring = data.scoring;
+            const scoringHTML = `
+                <div class="score-item">
+                    <div class="score-value">${scoring.crypto_relevance}/10</div>
+                    <div class="score-label">Quality</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value">${scoring.engagement_potential}/10</div>
+                    <div class="score-label">Engagement</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value">${scoring.semantic_quality}/10</div>
+                    <div class="score-label">Semantic</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-value">${scoring.total}/30</div>
+                    <div class="score-label">Total</div>
+                </div>
+            `;
+            document.getElementById('scoringSection').innerHTML = scoringHTML;
+            const feedbackHTML = `
+                <h4 style="margin-bottom: 15px; color: #333;">${scoring.rating}</h4>
+                <ul>${scoring.feedback.map(item => `<li>${item}</li>`).join('')}</ul>
+            `;
+            document.getElementById('feedbackSection').innerHTML = feedbackHTML;
+            resultSection.classList.add('show');
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const content = document.getElementById('generatedContent').textContent;
+            navigator.clipboard.writeText(content).then(() => alert('âœ… Copied!'));
+        });
+        
+        // Analyze form
+        const analyzeForm = document.getElementById('analyzeForm');
+        const loadingAnalyze = document.getElementById('loadingAnalyze');
+        const analyzeResult = document.getElementById('analyzeResult');
+        
+        analyzeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('analyzeContent').value.trim();
+            
+            if (!content) {
+                alert('Paste konten tweet Anda!');
+                return;
+            }
+            
+            loadingAnalyze.classList.add('show');
+            analyzeResult.classList.remove('show');
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error');
+                displayAnalysis(data.analysis);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loadingAnalyze.classList.remove('show');
+            }
+        });
+        
+        function displayAnalysis(analysis) {
+            document.getElementById('analyzeRating').textContent = analysis.rating + ' | Est. YAPS: ~' + analysis.estimated_yaps + ' pts';
+            
+            const gridHTML = `
+                <div class="analysis-section">
+                    <h3>1. Content Optimization (30% weight) - Score: ${analysis.content_optimization.score}/10</h3>
+                    <div class="detail-row"><span>Length:</span><span>${analysis.content_optimization.details.length}</span></div>
+                    <div class="detail-row"><span>Crypto Focus:</span><span>${analysis.content_optimization.details.crypto_focus}</span></div>
+                    <div class="detail-row"><span>Originality:</span><span>${analysis.content_optimization.details.originality}</span></div>
+                    <div class="detail-row"><span>Keywords:</span><span>${analysis.content_optimization.details.keywords}</span></div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>2. Engagement Strategy (50% weight) - Score: ${analysis.engagement_strategy.score}/10</h3>
+                    <div class="detail-row"><span>Question/Hook:</span><span>${analysis.engagement_strategy.details.question}</span></div>
+                    <div class="detail-row"><span>Data-Driven:</span><span>${analysis.engagement_strategy.details.data_driven}</span></div>
+                    <div class="detail-row"><span>Call-to-Action:</span><span>${analysis.engagement_strategy.details.cta}</span></div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>3. Content Quality (20% weight) - Score: ${analysis.content_quality.score}/10</h3>
+                    <div class="detail-row"><span>Metrics/Data:</span><span>${analysis.content_quality.details.metrics}</span></div>
+                    <div class="detail-row"><span>Analysis Depth:</span><span>${analysis.content_quality.details.depth}</span></div>
+                    <div class="detail-row"><span>Spam Check:</span><span>${analysis.content_quality.details.spam_check}</span></div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>4. Content Types Detected:</h3>
+                    ${analysis.content_types.map(type => `<span class="badge badge-success">${type}</span>`).join('')}
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>5. Penalties:</h3>
+                    ${analysis.penalties.map(p => `<span class="badge badge-warning">${p}</span>`).join('')}
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>6. Optimization Suggestions:</h3>
+                    ${analysis.suggestions.map(s => `<span class="badge badge-info">${s}</span>`).join('')}
+                </div>
+                
+                <div class="score-item" style="margin-top: 20px;">
+                    <div class="score-value">${analysis.total_score}/10</div>
+                    <div class="score-label">TOTAL WEIGHTED SCORE</div>
+                </div>
+            `;
+            
+            document.getElementById('analysisGrid').innerHTML = gridHTML;
+            analyzeResult.classList.add('show');
+            analyzeResult.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

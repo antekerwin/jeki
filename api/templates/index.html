@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAPS Content Tool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 { color: #667eea; font-size: 2.5em; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 1.1em; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+        .tab:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.3); }
+        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .form-group { margin-bottom: 25px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border 0.3s;
+            font-family: inherit;
+        }
+        .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .prompt-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .prompt-card {
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .prompt-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        .prompt-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .prompt-card h3 { color: #667eea; margin-bottom: 8px; font-size: 1em; }
+        .prompt-card p { color: #666; font-size: 0.85em; }
+        .custom-area {
+            display: none;
+            margin-top: 15px;
+        }
+        .custom-area.show { display: block; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: scale(1.02); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .result-section { display: none; }
+        .result-section.show { display: block; }
+        .content-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        .content-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .copy-btn:hover { background: #218838; }
+        .scoring {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .score-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        .score-value { font-size: 2em; font-weight: 700; color: #667eea; }
+        .score-label { color: #666; margin-top: 5px; font-size: 0.9em; }
+        .feedback-list {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        .feedback-list ul { list-style: none; }
+        .feedback-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .loading.show { display: block; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .analysis-grid {
+            display: grid;
+            gap: 20px;
+        }
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .analysis-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin: 5px;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .algo-box { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #1da1f2; }
+        .algo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px; }
+        .algo-item { background: white; padding: 15px; border-radius: 8px; text-align: center; }
+        .algo-value { font-size: 2em; font-weight: 700; color: #1da1f2; }
+        .algo-label { color: #666; font-size: 0.9em; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 YAPS Content Tool</h1>
+            <p>Generate & Analyze konten YAPS-optimized (Kaito AI)</p>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="generate">🎯 Generate Konten</div>
+            <div class="tab" data-tab="analyze">📊 Check Kualitas</div>
+            <div class="tab" data-tab="twitter">🐦 Algoritma Twitter</div>
+        </div>
+        
+        <!-- TAB 1: GENERATE -->
+        <div id="generate" class="tab-content active">
+            <div class="card">
+                <form id="generatorForm">
+                    <div class="form-group">
+                        <label>1️⃣ Pilih Project</label>
+                        <select id="projectSelect" required>
+                            <option value="">-- Pilih Project --</option>
+                            {% for project in projects %}
+                            <option value="{{ project.name }}">{{ project.name }} ({{ project.category }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>2️⃣ Pilih Jenis Konten</label>
+                        <div class="prompt-cards">
+                            {% for key, prompt in prompts.items() %}
+                            <div class="prompt-card" data-value="{{ key }}">
+                                <h3>{{ prompt.name }}</h3>
+                                <p>{{ prompt.description }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" id="promptType" required>
+                        
+                        <div id="customArea" class="custom-area">
+                            <label>✏️ Request Custom:</label>
+                            <textarea id="customRequest" rows="3" placeholder="Contoh: Buat thread airdrop strategy..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">🎯 Generate</button>
+                </form>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">Generating...</p>
+                </div>
+            </div>
+            
+            <div class="card result-section" id="resultSection">
+                <h2 style="color: #667eea; margin-bottom: 20px;">📝 Hasil Generate</h2>
+                <div class="content-box">
+                    <div class="content-text" id="generatedContent"></div>
+                    <button class="copy-btn" id="copyBtn">📋 Copy</button>
+                </div>
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #333;">📊 Score</h3>
+                <div class="scoring" id="scoringSection"></div>
+                <div class="feedback-list" id="feedbackSection"></div>
+                <button class="btn" style="margin-top: 20px;" onclick="location.reload()">🔄 Generate Baru</button>
+            </div>
+        </div>
+        
+        <!-- TAB 2: ANALYZE -->
+        <div id="analyze" class="tab-content">
+            <div class="card">
+                <h2 style="color: #667eea; margin-bottom: 20px;">📊 Check Kualitas Konten</h2>
+                <p style="color: #666; margin-bottom: 20px;">Paste konten tweet Anda untuk mendapat scoring & feedback berdasarkan Kaito YAPS algorithm</p>
+                
+                <form id="analyzeForm">
+                    <div class="form-group">
+                        <label>📝 Konten Tweet Anda:</label>
+                        <textarea id="analyzeContent" rows="6" placeholder="Paste konten tweet Anda disini..." required></textarea>
+                        <small style="color: #999;">Min 50 karakter, optimal 150-280 karakter</small>
+                    </div>
+                    <button type="submit" class="btn">🔍 Analyze Kualitas</button>
+                </form>
+                
+                <div class="loading" id="loadingAnalyze">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">Analyzing...</p>
+                </div>
+            </div>
+            
+            <div class="card result-section" id="analyzeResult">
+                <h2 style="color: #667eea; margin-bottom: 20px;" id="analyzeRating"></h2>
+                
+                <div class="analysis-grid" id="analysisGrid"></div>
+                
+                <button class="btn" style="margin-top: 20px;" onclick="document.getElementById('analyzeContent').value=''; document.getElementById('analyzeResult').classList.remove('show');">🔄 Analyze Konten Lain</button>
+            </div>
+        </div>
+        
+        <!-- TAB 3: ALGORITMA TWITTER -->
+        <div id="twitter" class="tab-content">
+            <div class="card">
+                <h2 style="color: #1da1f2; margin-bottom: 20px;">🐦 Algoritma Twitter</h2>
+                
+                <div class="algo-box" style="border-left-color: #1da1f2;">
+                    <h3 style="color: #1da1f2; margin-bottom: 15px;">⚖️ Bobot Engagement</h3>
+                    <div class="algo-grid">
+                        <div class="algo-item">
+                            <div class="algo-value">75x</div>
+                            <div class="algo-label">Reply (Balasan)</div>
+                            <div style="color: #28a745; font-size: 0.8em; margin-top: 5px;">★ Paling Kuat</div>
+                        </div>
+                        <div class="algo-item">
+                            <div class="algo-value">30x</div>
+                            <div class="algo-label">Conversation</div>
+                        </div>
+                        <div class="algo-item">
+                            <div class="algo-value">10x</div>
+                            <div class="algo-label">Retweet</div>
+                        </div>
+                        <div class="algo-item">
+                            <div class="algo-value">1x</div>
+                            <div class="algo-label">Like</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="algo-box" style="border-left-color: #28a745; background: #d4edda;">
+                    <h3 style="color: #28a745; margin-bottom: 15px;">✅ Faktor Boost</h3>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>❓ Tanda Tanya (?)</strong> <span style="float: right; background: #28a745; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">+35 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Mendorong balasan (Reply 75x)</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>💬 Call-to-Action</strong> <span style="float: right; background: #28a745; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">+25 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">apa, bagaimana, mengapa, pendapat</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>📊 Data/Metrik</strong> <span style="float: right; background: #28a745; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">+15 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Angka, statistik konkret</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>📏 Panjang Optimal</strong> <span style="float: right; background: #28a745; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">+15 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">50-280 karakter</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px;">
+                        <strong>🚫 Tanpa Spam</strong> <span style="float: right; background: #28a745; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">+10 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Hindari "follow", "RT", "like if"</div>
+                    </div>
+                </div>
+                
+                <div class="algo-box" style="border-left-color: #dc3545; background: #f8d7da;">
+                    <h3 style="color: #dc3545; margin-bottom: 15px;">❌ Faktor Penalti</h3>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>🚨 Engagement Farming</strong> <span style="float: right; background: #dc3545; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">-20 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Penalti -74x</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>🔤 Keyword Stuffing</strong> <span style="float: right; background: #dc3545; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">-15 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">>5 keywords</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <strong>🔗 Link Ganda</strong> <span style="float: right; background: #dc3545; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">-10 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">>1 link → -30% reach</div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 8px;">
+                        <strong>@ Mention Banyak</strong> <span style="float: right; background: #dc3545; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.9em;">-10 poin</span>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">>3 mentions</div>
+                    </div>
+                </div>
+                
+                <div class="algo-box" style="border-left-color: #ffc107; background: #fff3cd;">
+                    <h3 style="color: #856404; margin-bottom: 10px;">⏰ 30 Menit Pertama = Kritis</h3>
+                    <p style="color: #666; margin: 0;">Engagement tinggi di awal = algoritma boost jangkauan</p>
+                </div>
+                
+                <div class="algo-box" style="border-left-color: #1da1f2; background: #1da1f2; color: white;">
+                    <h3 style="margin-bottom: 10px;">💡 Tips Pro</h3>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+                        <li>Selalu include pertanyaan (boost 75x)</li>
+                        <li>Gunakan data konkret</li>
+                        <li>Posting jam prime time</li>
+                        <li>Hindari link di tweet pertama</li>
+                        <li>Thread > single tweet</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // Generate form
+        const promptCards = document.querySelectorAll('.prompt-card');
+        const promptTypeInput = document.getElementById('promptType');
+        const customArea = document.getElementById('customArea');
+        const form = document.getElementById('generatorForm');
+        
+        promptCards.forEach(card => {
+            card.addEventListener('click', () => {
+                promptCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                promptTypeInput.value = card.dataset.value;
+                customArea.classList.toggle('show', card.dataset.value === 'custom');
+            });
+        });
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const project = document.getElementById('projectSelect').value;
+            const promptType = promptTypeInput.value;
+            const customRequest = document.getElementById('customRequest').value;
+            
+            if (!project || !promptType) {
+                alert('Pilih project dan jenis konten!');
+                return;
+            }
+            
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('resultSection').classList.remove('show');
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project, prompt_type: promptType, custom_request: customRequest })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error');
+                
+                document.getElementById('generatedContent').textContent = data.content;
+                
+                const scoring = data.scoring;
+                document.getElementById('scoringSection').innerHTML = `
+                    <div class="score-item">
+                        <div class="score-value">${scoring.crypto_relevance}/10</div>
+                        <div class="score-label">Crypto Relevance</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">${scoring.engagement_potential}/10</div>
+                        <div class="score-label">Engagement</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">${scoring.semantic_quality}/10</div>
+                        <div class="score-label">Quality</div>
+                    </div>
+                `;
+                
+                document.getElementById('feedbackSection').innerHTML = `
+                    <h3 style="color: #667eea; margin-bottom: 12px;">${scoring.rating}</h3>
+                    <ul>${scoring.feedback.map(f => `<li>${f}</li>`).join('')}</ul>
+                `;
+                
+                document.getElementById('resultSection').classList.add('show');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        });
+        
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const content = document.getElementById('generatedContent').textContent;
+            navigator.clipboard.writeText(content);
+            alert('✅ Copied!');
+        });
+        
+        // Analyze form
+        const analyzeForm = document.getElementById('analyzeForm');
+        analyzeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('analyzeContent').value.trim();
+            
+            if (!content) {
+                alert('Masukkan konten tweet!');
+                return;
+            }
+            
+            document.getElementById('loadingAnalyze').classList.add('show');
+            document.getElementById('analyzeResult').classList.remove('show');
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Error');
+                
+                const analysis = data.analysis;
+                document.getElementById('analyzeRating').textContent = analysis.rating;
+                
+                let gridHTML = '';
+                
+                // Content Optimization
+                gridHTML += `<div class="analysis-section">
+                    <h3>Content Optimization (${analysis.content_optimization.weight})</h3>
+                    <div class="score-value">${analysis.content_optimization.score}/10</div>
+                    ${Object.entries(analysis.content_optimization.details).map(([k,v]) => 
+                        `<div class="detail-row"><span>${k}:</span><span>${v}</span></div>`
+                    ).join('')}
+                </div>`;
+                
+                // Engagement Strategy
+                gridHTML += `<div class="analysis-section">
+                    <h3>Engagement Strategy (${analysis.engagement_strategy.weight})</h3>
+                    <div class="score-value">${analysis.engagement_strategy.score}/10</div>
+                    ${Object.entries(analysis.engagement_strategy.details).map(([k,v]) => 
+                        `<div class="detail-row"><span>${k}:</span><span>${v}</span></div>`
+                    ).join('')}
+                </div>`;
+                
+                // Content Quality
+                gridHTML += `<div class="analysis-section">
+                    <h3>Content Quality (${analysis.content_quality.weight})</h3>
+                    <div class="score-value">${analysis.content_quality.score}/10</div>
+                    ${Object.entries(analysis.content_quality.details).map(([k,v]) => 
+                        `<div class="detail-row"><span>${k}:</span><span>${v}</span></div>`
+                    ).join('')}
+                </div>`;
+                
+                // Total & YAPS
+                gridHTML += `<div class="analysis-section" style="border-left-color: #28a745;">
+                    <h3>Total Score</h3>
+                    <div class="score-value">${analysis.total_score}/10</div>
+                    <p style="margin-top: 10px; color: #666;">Est. YAPS: <strong>${analysis.estimated_yaps}</strong> pts</p>
+                </div>`;
+                
+                // Content Types & Penalties
+                if (analysis.content_types && analysis.content_types.length > 0) {
+                    gridHTML += `<div class="analysis-section">
+                        <h3>Content Types</h3>
+                        ${analysis.content_types.map(t => `<span class="badge badge-info">${t}</span>`).join('')}
+                    </div>`;
+                }
+                
+                if (analysis.penalties && analysis.penalties.length > 0) {
+                    gridHTML += `<div class="analysis-section" style="border-left-color: #dc3545;">
+                        <h3>Penalties</h3>
+                        ${analysis.penalties.map(p => `<span class="badge badge-warning">${p}</span>`).join('')}
+                    </div>`;
+                }
+                
+                // Suggestions
+                if (analysis.suggestions && analysis.suggestions.length > 0) {
+                    gridHTML += `<div class="analysis-section" style="border-left-color: #17a2b8;">
+                        <h3>Suggestions</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            ${analysis.suggestions.map(s => `<li style="padding: 5px 0;">${s}</li>`).join('')}
+                        </ul>
+                    </div>`;
+                }
+                
+                document.getElementById('analysisGrid').innerHTML = gridHTML;
+                document.getElementById('analyzeResult').classList.add('show');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                document.getElementById('loadingAnalyze').classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
