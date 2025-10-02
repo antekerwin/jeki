@@ -253,37 +253,59 @@ def generate_template_content(project, prompt_type, custom_request):
     funding = random.randint(20, 150)
     
     if prompt_type == 'data-driven':
-        # Mix of quick tweets and narrative insights
+        # Mostly narrative insights (80% narrative, 20% quick)
         templates = [
-            # Quick data tweets
-            f"{project} menunjukkan pertumbuhan {growth}% dalam 30 hari terakhir dengan TVL mencapai ${tvl}M. Active users naik {users}K. Fundamental kuat atau hype sementara?",
-            f"Data menarik: {project} TVL ${tvl}M (+{growth}%), user growth {users}K. Dibanding kompetitor masih undervalued. Accumulation zone?",
-            # Narrative insight format
-            f"GM anon ??\n\n{project} is once again the focus of conversation in crypto\n\nWith ${funding}m in funding and {growth}% growth, they're no longer just an experiment\n\nWhy is this interesting? ??\n\n• TVL hit ${tvl}M (+{growth}% MoM)\n• User base expanding: {users}K active users\n• Strong fundamentals vs market sentiment gap\n\ndo you see this winning the next cycle?",
-            f"{project} update — numbers don't lie:\n\n• ${tvl}M TVL (+{growth}% growth)\n• {users}K users (fastest growing in category)\n• Backed by ${funding}M funding\n\nCompare this to competitors trading at 3-5x higher valuations.\n\nAre we early or am I missing something?"
+            # Narrative insight formats (GM dude style)
+            f"GM dude ??\n\n{project} is once again the focus of conversation in crypto\n\nWith ${funding}m in funding, they are no longer just an experiment, but serious candidates in their category\n\nWhy is this interesting? ??\n\n• TVL hit ${tvl}M (+{growth}% MoM)\n• User base expanding: {users}K active users  \n• Strong fundamentals vs market sentiment gap\n\ndo you see {project} winning the next cycle?",
+            f"GM anon ??\n\n{project} numbers are telling a story\n\nWith {growth}% growth and ${tvl}M TVL, they're moving fast\n\nWhy this matters ??\n\n• Growth rate: {growth}% (top tier in category)\n• Capital backing: ${funding}M from top VCs\n• User traction: {users}K active wallets\n\nThe data suggests accumulation phase. Are we early?",
+            f"{project} update — numbers don't lie:\n\n• ${tvl}M TVL (+{growth}% growth)\n• {users}K users (fastest growing in category)\n• Backed by ${funding}M funding\n\nCompare this to competitors trading at 3-5x higher valuations.\n\nAre we early or am I missing something?",
+            f"Quick {project} breakdown ??\n\nFundamentals are strong but market hasn't caught up yet\n\nWhat I'm seeing ??\n\n• ${tvl}M TVL with {growth}% organic growth\n• {users}K users onboarded (no token incentives yet)\n• ${funding}M raised from tier-1 backers\n\nRisk/reward looking asymmetric here. Thoughts?",
+            f"GM fam ??\n\n{project} is quietly building while everyone's distracted\n\nThe numbers ??\n\n• {growth}% growth (30-day)\n• ${tvl}M TVL milestone hit  \n• {users}K active users and growing\n\nFundamentals > hype. Do you see the potential here?",
+            # Quick data tweets (20% probability)
+            f"Data menarik: {project} TVL ${tvl}M (+{growth}%), user growth {users}K. Dibanding kompetitor masih undervalued. Accumulation zone?"
         ]
     elif prompt_type == 'competitive':
         templates = [
-            f"Comparing {project} vs kompetitor: lebih cepat ({growth} TPS), fee lebih rendah, tapi awareness masih kurang. Marketing push bisa game changer?",
-            f"Hot take on {project}:\n\nTech-wise: {growth}% faster than competitors\nEconomics: Lower fees, higher throughput\nChallenge: Awareness & community size\n\nIn a market that values narratives over tech, can {project} bridge this gap?\n\nThoughts? ??",
-            f"{project} has a superior tech stack ({growth}% improvement on key metrics) but lags in ecosystem mindshare.\n\nHistory shows: best tech doesn't always win.\n\nWhat matters more — technical excellence or community momentum?",
+            f"Hot take on {project} ??\n\nTech-wise: {growth}% faster than competitors\nEconomics: Lower fees, higher throughput  \nChallenge: Awareness & community size\n\nIn a market that values narratives over tech, can {project} bridge this gap?\n\nThoughts? ??",
+            f"GM anon ??\n\n{project} vs the competition — let's break it down\n\nWhat they're winning at ??\n\n• Performance: {growth}% faster processing\n• Economics: ${tvl}M TVL with better unit economics\n• Execution: Shipped {users}% more features than roadmap\n\nWhat they're losing at:\n• Marketing & awareness\n• Community size\n\nCan fundamentals win over narratives? History says...",
+            f"Comparing {project} to competitors ??\n\nThe good ??\n• {growth}% faster than market leader\n• ${tvl}M TVL (growing organically)\n• Lower fees + better UX\n\nThe challenge:\n• Awareness gap vs competitors\n• Smaller community (for now)\n\nBet on tech or bet on hype? What's your play?"
         ]
     elif prompt_type == 'thesis':
         templates = [
-            f"Bold prediction: {project} akan jadi top 3 di kategorinya dalam 6 bulan. Alasan: tech superior ({growth}% faster), team proven, timing perfect. Setuju?",
-            f"Contrarian take on {project} ??\n\nMarket is sleeping on this one. While everyone chases hype, {project} quietly:\n\n• Shipped {growth}% more features than roadmap\n• TVL growing ${tvl}M organically (no incentives)\n• Team execution: flawless\n\nRisk/reward here looks asymmetric. What am I missing?",
-            f"{project} is at a turning point.\n\nIf they maintain {growth}% growth rate and TVL breaks ${tvl}M, we're looking at potential 5-10x from here.\n\nKey catalysts: mainnet launch, partnerships, token mechanics.\n\nBullish or cautious? ??"
+            f"Contrarian take on {project} ??\n\nMarket is sleeping on this one. While everyone chases hype, {project} quietly:\n\n• Shipped {growth}% more features than roadmap\n• TVL growing ${tvl}M organically (no incentives)  \n• Team execution: flawless\n\nRisk/reward here looks asymmetric. What am I missing?",
+            f"GM dude ??\n\n{project} is at a turning point\n\nWhy I'm watching closely ??\n\n• Growth trajectory: {growth}% (sustainable pace)\n• TVL milestone: ${tvl}M (next target: 2x from here)\n• Catalysts lined up: mainnet launch + partnerships\n\nIf they execute, we're looking at 5-10x potential.\n\nBullish or cautious?",
+            f"Bold prediction on {project} ??\n\nThey will be top 3 in their category within 6 months\n\nWhy? ??\n\n• Tech: {growth}% superior performance vs competitors\n• Team: Proven track record (previous exits)\n• Timing: Market conditions aligning perfectly\n• Execution: Ahead of roadmap consistently\n\nAm I too bullish or are we genuinely early?",
+            f"{project} thesis thread ??\n\nThe setup here is interesting\n\nBullish signals ??\n• {growth}% growth maintained for 90 days\n• ${tvl}M TVL (organic, no mercenary capital)\n• ${funding}M backing from smart money\n• Builder community growing fast\n\nBearish risk: Market timing, competition\n\nNet: Risk/reward heavily skewed to upside. Thoughts?"
         ]
-    else:  # custom
+    else:  # custom - multiple narrative styles
         if custom_request:
             templates = [
+                # Technical Narrator style
+                f"what is {project} pitch to founders and builders?\n\n{growth}% performance improvement and sub-second finality combined with being EVM compatible.\n\nthis means that {project} currently can call themselves one of the fastest chains.\n\nKey benefits:\n• ${tvl}M TVL with organic growth\n• {users}K active users and growing\n• Accelerator program for builders from zero to one\n• Integration within the ecosystem\n\nanother key benefit is their community program focused on securing attention. if new launches leverage this well, they can bootstrap their own mindshare.",
+                
+                # Personal Reflection style
+                f"After much reflection on {project}'s journey\n\nIt's been incredible watching the growth: {growth}% expansion, ${tvl}M TVL milestone, and {users}K users onboarded.\n\nThe space has evolved beautifully, yet chaotically. Seeing fundamentals like these makes me believe we're still early in this cycle.\n\nWhat's your take on {project}'s trajectory?",
+                
+                # Indonesian Wisdom style
+                f"Baru-baru ini saya menyadari bahwa proyek-proyek seperti {project} yang survive bear market selalu menemukan momentum di bull run.\n\nMereka telah mencapai:\n• {growth}% pertumbuhan organik\n• ${tvl}M TVL tanpa incentive farming\n• {users}K pengguna aktif yang loyal\n\nBelajarlah dari ini.\n\nSaya percaya jika sebuah proyek bertahan cukup lama dengan fundamentals kuat, mereka akan menemukan sukses mereka sendiri.\n\nSetuju?",
+                
+                # Default custom request
                 f"{project}: {custom_request}\n\nCurrent metrics: {growth}% growth, ${tvl}M TVL, {users}K users\n\nThoughts?",
+                
+                # Indonesian variant
                 f"Re: {custom_request}\n\n{project} showing strong signals:\n• {growth}% up (30d)\n• {users}K active users\n• ${tvl}M TVL milestone\n\nBagaimana menurut kalian?"
             ]
         else:
+            # More narrative-style default templates
             templates = [
-                f"{project} update: {growth}% growth, ecosystem expanding with {users}K active users. Bullish or cautious?",
-                f"Watching {project} closely\n\nMetrics look solid:\n• {growth}% growth rate\n• ${tvl}M TVL\n• {users}K users onboarded\n\nBut market sentiment still mixed. What's your take? ??"
+                # Technical Narrator
+                f"what is {project} bringing to the table?\n\n{growth}% improvement over competitors with sub-second finality.\n\nKey metrics:\n• ${tvl}M TVL (organic growth)\n• {users}K active users\n• Strong builder ecosystem\n\nthis is interesting because they're solving real problems while others focus on hype.",
+                
+                # Personal Reflection
+                f"Watching {project} develop has been fascinating\n\nThe fundamentals keep improving:\n• {growth}% growth rate\n• ${tvl}M TVL\n• {users}K users onboarded\n\nMarket sentiment is still mixed, but I think we're early here. What's your take? ??",
+                
+                # Indonesian Wisdom
+                f"Menarik melihat {project} bertahan dan berkembang\n\nMetrik mereka solid:\n• {growth}% pertumbuhan organik\n• ${tvl}M TVL tanpa hype\n• {users}K pengguna aktif\n\nProyek yang fokus pada fundamentals biasanya menang jangka panjang. Setuju?"
             ]
     
     return random.choice(templates)
