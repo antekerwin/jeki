@@ -214,43 +214,99 @@ def analyze_content():
         else:
             rating = "?? Poor - Optimize further"
         
+        # Build Twitter Algorithm scoring
+        twitter_score = 0
+        engagement_factors = []
+        twitter_penalties = []
+        
+        if has_question:
+            twitter_score += 35
+            engagement_factors.append("? Has question (+35 pts, drives Reply 75x)")
+        if has_cta:
+            twitter_score += 25
+            engagement_factors.append("?? Call-to-action (+25 pts)")
+        if has_data:
+            twitter_score += 15
+            engagement_factors.append("?? Data/metrics (+15 pts)")
+        if optimal_length:
+            twitter_score += 15
+            engagement_factors.append("?? Optimal length 150-280 chars (+15 pts)")
+        if no_spam_pattern:
+            twitter_score += 10
+            engagement_factors.append("?? No spam patterns (+10 pts)")
+        
+        # Twitter penalties
+        spam_keywords = ['follow me', 'rt this', 'like if']
+        if any(spam in content_lower for spam in spam_keywords):
+            twitter_score -= 20
+            twitter_penalties.append("?? Engagement farming detected (-20 pts)")
+        if keyword_stuffing:
+            twitter_score -= 15
+            twitter_penalties.append("?? Keyword stuffing (-15 pts)")
+        
+        twitter_score = max(0, min(100, twitter_score))
+        
+        if twitter_score >= 80:
+            twitter_rating = "?? Potensi Viral - Engagement sangat tinggi"
+        elif twitter_score >= 60:
+            twitter_rating = "?? Jangkauan Bagus - Above average"
+        elif twitter_score >= 40:
+            twitter_rating = "?? Jangkauan Sedang - Standard"
+        else:
+            twitter_rating = "?? Jangkauan Rendah - Perlu optimasi"
+        
         return jsonify({
             "success": True,
             "analysis": {
-                "content_optimization": {
-                    "score": content_opt_score,
-                    "weight": "30%",
-                    "details": {
-                        "length": f"{char_count} chars" + (" ? optimal" if optimal_length else " ?? adjust to 150-280"),
-                        "crypto_focus": "? Yes" if has_crypto_focus else "? No crypto topic",
-                        "originality": "? Original" if is_original else "?? Too generic",
-                        "keywords": f"{keyword_count} keywords" + (" ?" if 1 <= keyword_count <= 3 else " ??")
-                    }
+                "kaito_yaps": {
+                    "total_score": total_score,
+                    "rating": rating,
+                    "estimated_yaps": estimated_yaps,
+                    "breakdown": {
+                        "content_optimization": {
+                            "score": content_opt_score,
+                            "weight": "30%",
+                            "details": {
+                                "length": f"{char_count} chars" + (" ? optimal" if optimal_length else " ?? adjust to 150-280"),
+                                "crypto_focus": "? Yes" if has_crypto_focus else "? No crypto topic",
+                                "originality": "? Original" if is_original else "?? Too generic",
+                                "keywords": f"{keyword_count} keywords" + (" ?" if 1 <= keyword_count <= 3 else " ??")
+                            }
+                        },
+                        "engagement_strategy": {
+                            "score": engagement_score,
+                            "weight": "50%",
+                            "details": {
+                                "question": "? Yes" if has_question else "? No",
+                                "data_driven": "? Yes" if has_data else "? No data/metrics",
+                                "cta": "? Yes" if has_cta else "? No call-to-action"
+                            }
+                        },
+                        "content_quality": {
+                            "score": quality_score,
+                            "weight": "20%",
+                            "details": {
+                                "metrics": "? Includes metrics" if has_metrics else "? No specific metrics",
+                                "depth": "? Detailed analysis" if has_analysis else "?? Surface-level",
+                                "spam_check": "? Clean" if no_spam_pattern else "?? Spam pattern detected"
+                            }
+                        }
+                    },
+                    "penalties": penalties if penalties else ["? No penalties detected"]
                 },
-                "engagement_strategy": {
-                    "score": engagement_score,
-                    "weight": "50%",
-                    "details": {
-                        "question": "? Yes" if has_question else "? No",
-                        "data_driven": "? Yes" if has_data else "? No data/metrics",
-                        "cta": "? Yes" if has_cta else "? No call-to-action"
-                    }
-                },
-                "content_quality": {
-                    "score": quality_score,
-                    "weight": "20%",
-                    "details": {
-                        "metrics": "? Includes metrics" if has_metrics else "? No specific metrics",
-                        "depth": "? Detailed analysis" if has_analysis else "?? Surface-level",
-                        "spam_check": "? Clean" if no_spam_pattern else "?? Spam pattern detected"
-                    }
+                "twitter_algorithm": {
+                    "score": twitter_score,
+                    "rating": twitter_rating,
+                    "engagement_factors": engagement_factors if engagement_factors else ["?? Standard engagement"],
+                    "penalties": twitter_penalties if twitter_penalties else [],
+                    "algorithm_notes": [
+                        "?? Reply (75x) > Conversation (30x) > Retweet (10x) > Like (1x)",
+                        "? 30 menit pertama paling penting untuk velocity",
+                        "? Question = boost Reply = 75x engagement weight"
+                    ]
                 },
                 "content_types": content_types if content_types else ["?? Standard tweet format"],
-                "penalties": penalties if penalties else ["? No penalties detected"],
-                "suggestions": suggestions if suggestions else ["? Content is well-optimized!"],
-                "total_score": total_score,
-                "estimated_yaps": estimated_yaps,
-                "rating": rating
+                "suggestions": suggestions if suggestions else ["? Content is well-optimized!"]
             }
         })
         
