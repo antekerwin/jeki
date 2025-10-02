@@ -58,7 +58,7 @@ def generate():
         prompt_type = data.get('prompt_type')
         custom_request = data.get('custom_request', '')
         
-        api_key = os.getenv('OPENROUTER_API_KEY')
+        api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
             return jsonify({"error": "API key not set"}), 500
         
@@ -67,20 +67,29 @@ def generate():
         chosen_style = random.choice(styles)
         
         if prompt_type == "custom" and custom_request:
-            user_prompt = f"{yaps_base}\nPROJECT: {project}\nSTYLE: {chosen_style}\nREQUEST: {custom_request}\n\nGENERATE tweet:"
+            user_prompt = f"{yaps_base}
+PROJECT: {project}
+STYLE: {chosen_style}
+REQUEST: {custom_request}
+
+GENERATE tweet:"
         else:
-            user_prompt = f"{yaps_base}\nPROJECT: {project}\nSTYLE: {chosen_style}\n\nGenerate data-driven tweet. 150-280 chars."
+            user_prompt = f"{yaps_base}
+PROJECT: {project}
+STYLE: {chosen_style}
+
+Generate data-driven tweet. 150-280 chars."
         
         temp = random.uniform(0.7, 0.95)
         
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "HTTP-Referer": "https://jeks-delta.vercel.app", "X-Title": "YAPS Generator"}
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {
-            "model": "x-ai/grok-2-1212",
+            "model": "llama-3.3-70b-versatile",
             "messages": [{"role": "system", "content": f"Crypto analyst: {chosen_style}. YAPS algorithm. Output ONLY tweet."}, {"role": "user", "content": user_prompt}],
             "temperature": temp, "max_tokens": 400, "top_p": 0.9
         }
         
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30)
+        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=30)
         if response.status_code != 200:
             return jsonify({"error": f"API error"}), 500
         
