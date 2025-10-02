@@ -67,26 +67,22 @@ def generate():
         chosen_style = random.choice(styles)
         
         if prompt_type == "custom" and custom_request:
-            user_prompt = f"{yaps_base}
-PROJECT: {project}
-STYLE: {chosen_style}
-REQUEST: {custom_request}
-
-GENERATE tweet:"
+            user_prompt = f"{yaps_base}\nPROJECT: {project}\nSTYLE: {chosen_style}\nREQUEST: {custom_request}\n\nGENERATE tweet:"
         else:
-            user_prompt = f"{yaps_base}
-PROJECT: {project}
-STYLE: {chosen_style}
-
-Generate data-driven tweet. 150-280 chars."
+            user_prompt = f"{yaps_base}\nPROJECT: {project}\nSTYLE: {chosen_style}\n\nGenerate data-driven tweet. 150-280 chars."
         
         temp = random.uniform(0.7, 0.95)
         
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {
             "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "system", "content": f"Crypto analyst: {chosen_style}. YAPS algorithm. Output ONLY tweet."}, {"role": "user", "content": user_prompt}],
-            "temperature": temp, "max_tokens": 400, "top_p": 0.9
+            "messages": [
+                {"role": "system", "content": f"Crypto analyst: {chosen_style}. YAPS algorithm. Output ONLY tweet."}, 
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": temp, 
+            "max_tokens": 400, 
+            "top_p": 0.9
         }
         
         response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=30)
@@ -101,11 +97,18 @@ Generate data-driven tweet. 150-280 chars."
         quality = 7 + (1 if optimal_length else 0) + (1 if has_data else 0) + (1 if has_question else 0)
         
         scoring = {
-            "crypto_relevance": quality, "engagement_potential": 9 if has_question else 7,
+            "crypto_relevance": quality, 
+            "engagement_potential": 9 if has_question else 7,
             "semantic_quality": 9 if (has_data and optimal_length) else 7,
             "total": quality + (9 if has_question else 7) + (9 if has_data else 7),
             "rating": f"⭐⭐⭐⭐{'⭐' if quality >= 9 else ''} Quality: {quality}/10",
-            "feedback": [f"📏 {char_count} chars" + (" ✅" if optimal_length else " ⚠️"), f"📊 Data: {'✅' if has_data else '⚠️'}", f"💬 Engage: {'✅' if has_question else '⚠️'}", f"🎯 Est. YAPS: ~{int(quality*0.7*75)} pts", f"🎨 Style: {chosen_style}"]
+            "feedback": [
+                f"📏 {char_count} chars" + (" ✅" if optimal_length else " ⚠️"), 
+                f"📊 Data: {'✅' if has_data else '⚠️'}", 
+                f"💬 Engage: {'✅' if has_question else '⚠️'}", 
+                f"🎯 Est. YAPS: ~{int(quality*0.7*75)} pts", 
+                f"🎨 Style: {chosen_style}"
+            ]
         }
         return jsonify({"success": True, "content": content, "scoring": scoring})
     except Exception as e:
