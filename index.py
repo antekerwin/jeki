@@ -58,7 +58,7 @@ def generate():
         prompt_type = data.get('prompt_type')
         custom_request = data.get('custom_request', '')
         
-        api_key = os.getenv('GROQ_API_KEY')
+        api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
             return jsonify({"error": "API key not set"}), 500
         
@@ -75,12 +75,12 @@ def generate():
         
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "x-ai/grok-2-1212",
             "messages": [{"role": "system", "content": f"Crypto analyst: {chosen_style}. YAPS algorithm. Output ONLY tweet."}, {"role": "user", "content": user_prompt}],
             "temperature": temp, "max_tokens": 400, "top_p": 0.9
         }
         
-        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=30)
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30)
         if response.status_code != 200:
             return jsonify({"error": f"API error"}), 500
         
