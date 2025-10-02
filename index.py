@@ -58,48 +58,12 @@ def generate():
         prompt_type = data.get('prompt_type')
         custom_request = data.get('custom_request', '')
         
-        # Build user_prompt based on prompt_type
-        if prompt_type == 'custom' and custom_request:
-            user_prompt = f"Write a crypto Twitter post about {project}: {custom_request}"
-        else:
-            prompt_styles = {
-                'data-driven': f"Write a data-driven crypto Twitter post about {project} with metrics and statistics",
-                'competitive': f"Write a crypto Twitter post comparing {project} with its competitors",
-                'thesis': f"Write a bold prediction crypto Twitter post about {project}"
-            }
-            user_prompt = prompt_styles.get(prompt_type, f"Write an insightful crypto Twitter post about {project}")
+        # Template-based generation (no API needed)
+        content = generate_template_content(project, prompt_type, custom_request)
         
-        # Randomize style & temperature
+        # Randomize style
         styles = ['analytical', 'contrarian', 'bullish', 'data-focused']
         chosen_style = random.choice(styles)
-        temp = round(random.uniform(0.7, 0.95), 2)
-        
-        # Free API - No key needed
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "inputs": user_prompt,
-            "parameters": {
-                "max_new_tokens": 280,
-                "temperature": temp,
-                "return_full_text": False
-            }
-        }
-        
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct",
-            headers=headers, 
-            json=payload, 
-            timeout=30
-        )
-        if response.status_code != 200:
-            return jsonify({"error": f"API error"}), 500
-        
-        # Parse Hugging Face response correctly
-        result = response.json()
-        if isinstance(result, list) and len(result) > 0:
-            content = result[0].get('generated_text', 'Error generating content')
-        else:
-            content = result.get('generated_text', 'Error generating content')
         
         char_count = len(content)
         optimal_length = 150 <= char_count <= 280
@@ -124,6 +88,46 @@ def generate():
         return jsonify({"success": True, "content": content, "scoring": scoring})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def generate_template_content(project, prompt_type, custom_request):
+    """Generate content using templates - no API needed"""
+    
+    # Random metrics for variety
+    growth = random.randint(150, 500)
+    tvl = random.randint(10, 500)
+    users = random.randint(50, 300)
+    
+    if prompt_type == 'data-driven':
+        templates = [
+            f"{project} menunjukkan pertumbuhan {growth}% dalam 30 hari terakhir dengan TVL mencapai ${tvl}M. Active users naik {users}K. Fundamental kuat atau hype sementara?",
+            f"Data menarik: {project} TVL ${tvl}M (+{growth}%), user growth {users}K. Dibanding kompetitor masih undervalued. Accumulation zone?",
+            f"{project} metrics: {growth}% growth, ${tvl}M TVL, {users}K users. Bandingkan dengan kompetitor yang valuasi 2-3x lebih tinggi. Apa pendapat kalian?"
+        ]
+    elif prompt_type == 'competitive':
+        templates = [
+            f"Comparing {project} vs kompetitor: lebih cepat ({growth} TPS), fee lebih rendah (${tvl} avg), tapi awareness masih kurang. Marketing push bisa game changer?",
+            f"{project} punya edge di tech ({growth}% faster), tapi kompetitor unggul di ecosystem. Trade-off mana yang lebih penting untuk long-term success?",
+            f"Hot take: {project} secara teknis superior ({growth}% improvement), tapi kalah di community size. Apakah tech excellence enough untuk win market share?"
+        ]
+    elif prompt_type == 'thesis':
+        templates = [
+            f"Bold prediction: {project} akan jadi top 3 di kategorinya dalam 6 bulan. Alasan: tech superior ({growth}% faster), team proven, timing perfect. Setuju?",
+            f"{project} sedang di turning point. Jika bisa maintain {growth}% growth rate dan TVL tembus ${tvl}M, potensi 5-10x dari sini. Risk/reward menarik?",
+            f"Contrarian take: Market underestimate {project}. Saat kompetitor valuasi tinggi tapi deliver sedikit, {project} deliver lebih tapi valuasi rendah. Apa yang market miss?"
+        ]
+    else:  # custom
+        if custom_request:
+            templates = [
+                f"{project}: {custom_request}. Growth {growth}%, TVL ${tvl}M. Thoughts?",
+                f"Re: {custom_request} - {project} showing strong metrics ({growth}% up, {users}K users). Bagaimana menurut kalian?"
+            ]
+        else:
+            templates = [
+                f"{project} update: {growth}% growth, ecosystem expanding with {users}K active users. Bullish or cautious?",
+                f"Watching {project} closely. Metrics solid ({growth}% growth, ${tvl}M TVL) but market sentiment mixed. What's your take?"
+            ]
+    
+    return random.choice(templates)
 
 @app.route('/analyze', methods=['POST'])
 def analyze_content():
