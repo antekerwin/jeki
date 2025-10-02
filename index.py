@@ -73,7 +73,7 @@ def generate():
         
         temp = random.uniform(0.7, 0.95)
         
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "HTTP-Referer": "https://jeks-delta.vercel.app", "X-Title": "YAPS Generator"}
         payload = {
             "model": "x-ai/grok-2-1212",
             "messages": [{"role": "system", "content": f"Crypto analyst: {chosen_style}. YAPS algorithm. Output ONLY tweet."}, {"role": "user", "content": user_prompt}],
